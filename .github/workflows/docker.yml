@@ -25,7 +25,7 @@ on:  # yamllint disable-line rule:truthy
         description: 'Build and publish Docker image'
 
 env:
-  IMAGE_NAME: cowrie
+  IMAGE_NAME: ${{ github.repository }}
   REGISTRY: ghcr.io
 
 jobs:
@@ -45,6 +45,12 @@ jobs:
 
       - name: set SOURCE_DATE_EPOCH
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.9.2
@@ -90,4 +96,5 @@ jobs:
           load: false
           sbom: true
           provenance: true
-          tags: ${{ env.REGISTRY }}/cowrie/cowrie:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

@@ -90,12 +90,3 @@ jobs:
           sbom: true
           provenance: true
           tags: cowrie/cowrie:latest
-
-      - name: Sign the images with GitHub OIDC Token
-        if: ${{ (github.event_name != 'pull_request') }}
-        env:
-          DIGEST: ${{ steps.push.outputs.digest }}
-          COSIGN_EXPERIMENTAL: 1
-        run: |
-          cosign sign -y cowrie/cowrie@${DIGEST}
-          cosign verify cowrie/cowrie --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' --certificate-identity 'https://github.com/cowrie/cowrie/.github/workflows/docker.yml@refs/heads/main'

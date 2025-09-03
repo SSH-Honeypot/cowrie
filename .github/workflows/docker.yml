@@ -26,6 +26,7 @@ on:  # yamllint disable-line rule:truthy
 
 env:
   IMAGE_NAME: cowrie
+  REGISTRY: ghcr.io
 
 jobs:
   # Push image to GitHub Packages.
@@ -61,7 +62,7 @@ jobs:
         if: ${{ (github.event_name != 'pull_request') }}
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -89,4 +90,4 @@ jobs:
           load: false
           sbom: true
           provenance: true
-          tags: cowrie/cowrie:latest
+          tags: ${{ env.REGISTRY }}/cowrie/cowrie:latest

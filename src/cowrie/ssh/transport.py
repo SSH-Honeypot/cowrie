@@ -22,6 +22,7 @@ from twisted.conch.ssh.common import getNS
 from twisted.internet.protocol import connectionDone
 from twisted.protocols.policies import TimeoutMixin
 from twisted.python import failure, log, randbytes
+from twisted.protocols.haproxy._wrapper import HAProxyProtocolWrapper
 
 from cowrie.core.config import CowrieConfig
 
@@ -244,7 +245,12 @@ class HoneyPotSSHTransport(transport.SSHServerTransport, TimeoutMixin):
         """
         self.setTimeout(None)
         transport.SSHServerTransport.connectionLost(self, reason)
-        self.transport.connectionLost(reason)
+
+        # Prevent recursion by checking if protocol is wrapped
+        if not isinstance(self.transport, HAProxyProtocolWrapper):
+            self.transport.connectionLost(reason)
+
+        #self.transport.connectionLost(reason)
         self.transport = None
         duration = f"{time.time() - self.startTime:.1f}"
         log.msg(

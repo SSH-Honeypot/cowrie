@@ -25,7 +25,8 @@ on:  # yamllint disable-line rule:truthy
         description: 'Build and publish Docker image'
 
 env:
-  IMAGE_NAME: cowrie
+  IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: ghcr.io
 
 jobs:
   # Push image to GitHub Packages.
@@ -37,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for cosign OIDC
+      packages: write  # Required for package push
 
     steps:
       - name: Checkout
@@ -45,9 +47,15 @@ jobs:
       - name: set SOURCE_DATE_EPOCH
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.9.2
-        if: ${{ (github.event_name != 'pull_request') && (github.repository == 'cowrie/cowrie') }}
+        if: ${{ (github.event_name != 'pull_request') }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -57,12 +65,13 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
 
-      - name: Login to Docker Hub
-        if: ${{ (github.event_name != 'pull_request') && (github.repository == 'cowrie/cowrie') }}
+      - name: Log in to the Container registry
+        if: ${{ (github.event_name != 'pull_request') }}
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Container Image
         id: build
@@ -79,7 +88,7 @@ jobs:
 
       - name: Push Container Image
         id: push
-        if: ${{ (github.event_name != 'pull_request') && (github.repository == 'cowrie/cowrie') }}
+        if: ${{ (github.event_name != 'pull_request') }}
         uses: docker/build-push-action@v6
         with:
           file: docker/Dockerfile
@@ -88,13 +97,5 @@ jobs:
           load: false
           sbom: true
           provenance: true
-          tags: cowrie/cowrie:latest
-
-      - name: Sign the images with GitHub OIDC Token
-        if: ${{ (github.event_name != 'pull_request') && (github.repository == 'cowrie/cowrie') }}
-        env:
-          DIGEST: ${{ steps.push.outputs.digest }}
-          COSIGN_EXPERIMENTAL: 1
-        run: |
-          cosign sign -y cowrie/cowrie@${DIGEST}
-          cosign verify cowrie/cowrie --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' --certificate-identity 'https://github.com/cowrie/cowrie/.github/workflows/docker.yml@refs/heads/main'
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

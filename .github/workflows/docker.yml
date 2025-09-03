@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for cosign OIDC
+      packages: write  # Required for package push
 
     steps:
       - name: Checkout

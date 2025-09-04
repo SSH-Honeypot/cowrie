@@ -250,7 +250,6 @@ class HoneyPotSSHTransport(transport.SSHServerTransport, TimeoutMixin):
         if not isinstance(self.transport, HAProxyProtocolWrapper):
             self.transport.connectionLost(reason)
 
-        #self.transport.connectionLost(reason)
         self.transport = None
         duration = f"{time.time() - self.startTime:.1f}"
         log.msg(

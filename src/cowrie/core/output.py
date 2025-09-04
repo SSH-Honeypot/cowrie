@@ -218,13 +218,19 @@ class Output(metaclass=abc.ABCMeta):
             if telnetmatch:
                 sessionno = f"T{telnetmatch.groups()[0]}"
             else:
+                # Angepasste Regex für HAProxy-Wrapper
                 sshmatch = self.sshRegex.match(ev["system"])
+                if not sshmatch:
+                    # Fallback für HAProxy-Wrapper
+                    haproxy_regex = re.compile(r".*SSHTransport(?: \(HAProxyProtocolWrapper\))?,([0-9]+),[0-9a-f:.]+$")
+                    sshmatch = haproxy_regex.match(ev["system"])
                 if sshmatch:
                     sessionno = f"S{sshmatch.groups()[0]}"
-            if sessionno == "0":
-                return
+                if sessionno == "0":
+                    print(f"Can't determine sessionno: {ev!r}")
+                    return
         else:
-            print(f"Can't determine sessionno: {ev!r}")  # noqa: T201
+            print(f"Can't determine sessionno: {ev!r}")
             return
 
         if sessionno in self.ips:
@@ -235,7 +241,10 @@ class Output(metaclass=abc.ABCMeta):
             self.sessions[sessionno] = ev["session"]
             self.ips[sessionno] = ev["src_ip"]
         else:
-            ev["session"] = self.sessions[sessionno]
+            ev["session"] = self.sessions.get(sessionno, None)
+            if ev["session"] is None:
+                print(f"No session found for sessionno {sessionno}: {ev!r}")
+                return
 
         self.write(ev)
 

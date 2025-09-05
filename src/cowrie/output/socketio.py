@@ -23,7 +23,6 @@ class Output(cowrie.core.output.Output):
         """
         try:
             self.url = CowrieConfig.get("output_socketio", "url")
-            log.msg(f"output_socketio: Connecting to {self.url}") # todo: disable or make debug
             reactor.callInThread(self._connect)
         except Exception as e:
             log.err(f"output_socketio: Error initializing: {e}")
@@ -33,7 +32,7 @@ class Output(cowrie.core.output.Output):
         Connect to the SocketIO server in a separate thread.
         """
         try:
-            self.sio.connect(self.url)
+            self.sio.connect(self.url, auth={ "sensor": self.sensor })
             self.connected = True
             log.msg("output_socketio: Connected to server")
         except Exception as e:

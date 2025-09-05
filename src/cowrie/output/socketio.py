@@ -59,42 +59,16 @@ class Output(cowrie.core.output.Output):
         if not self.connected:
             log.msg(f"output_socketio: Not connected, skipping event {event.get('eventid', 'unknown')}")
             return
-        try:
-            event_name = event.get("eventid", "cowrie_event")
-            # Bereinige Event-Dictionary
-            cleaned_event = self._clean_event(event)
-            reactor.callInThread(self._send_event, event_name, cleaned_event)
-        except Exception as e:
-            log.err(f"output_socketio: Error preparing event {event.get('eventid', 'unknown')}: {e}")
-
-    def _clean_event(self, event: dict) -> dict:
-        """
-        Convert non-serializable objects in the event dictionary to JSON-serializable types.
-        """
-        def convert_value(value):
-            if isinstance(value, (str, int, float, bool, type(None))):
-                return value
-            elif isinstance(value, (bytes, bytearray)):
-                try:
-                    return value.decode("utf-8")
-                except UnicodeDecodeError:
-                    return repr(value)
-            elif isinstance(value, (list, tuple)):
-                return [convert_value(item) for item in value]
-            elif isinstance(value, dict):
-                return {str(key): convert_value(val) for key, val in value.items()}
-            else:
-                # Fallback für Objekte wie NamedConstant
-                return str(value)
-
-        return {key: convert_value(value) for key, value in event.items()}
+        if not (event["eventid"] == "cowrie.login.failed" or event["eventid"] == "cowrie.login.success"):
+            return
+        reactor.callInThread(self._send_event, event["eventid"], event)
 
     def _send_event(self, event_name: str, event: dict):
         """
         Send the event to the SocketIO backend in a separate thread.
         """
         try:
-            self.sio.emit(event_name, event)
+            self.sio.emit(event_name, { "session": event["session"], "src_ip": event["src_ip"], "username": event["username"], "password": event["password"] })
             log.msg(f"output_socketio: Sent event {event_name}")
         except Exception as e:
             log.err(f"output_socketio: Failed to send event {event_name}: {e}")

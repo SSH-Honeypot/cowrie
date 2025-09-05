@@ -139,6 +139,19 @@ class HoneyPotSSHTransport(transport.SSHServerTransport, TimeoutMixin):
                 return
             i = self.buf.index(b"\n")
             self.buf = self.buf[i + 1 :]
+            # send session update_ip event since twisted has now parsed PROXY header
+            src_ip: str = self.transport.getPeer().host
+            ipv4_search = self.ipv4rex.search(src_ip)
+            if ipv4_search is not None:
+                src_ip = ipv4_search.group(1)
+            log.msg(
+                eventid="cowrie.session.update_ip",
+                format="Updating session IP to %(src_ip)s:%(src_port)s for session %(session)s",
+                src_ip=src_ip,
+                src_port=self.transport.getPeer().port,
+                session=self.transportId,
+                sessionno=f"S{self.transport.sessionno}",
+            )
             self.sendKexInit()
         packet = self.getPacket()
         while packet:

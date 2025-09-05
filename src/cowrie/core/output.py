@@ -233,18 +233,25 @@ class Output(metaclass=abc.ABCMeta):
             print(f"Can't determine sessionno: {ev!r}")
             return
 
-        if sessionno in self.ips:
-            ev["src_ip"] = self.ips[sessionno]
-
         # Connection event is special. adds to session list
         if ev["eventid"] == "cowrie.session.connect":
             self.sessions[sessionno] = ev["session"]
             self.ips[sessionno] = ev["src_ip"]
+        # Update IP event as soon as PROXY header was passed
+        elif ev["eventid"] == "cowrie.session.update_ip":
+            self.ips[sessionno] = ev["src_ip"]
+            ev["session"] = self.sessions.get(sessionno, None)
+            if ev["session"] is None:
+                print(f"No session found for sessionno {sessionno}: {ev!r}")
+                return
         else:
             ev["session"] = self.sessions.get(sessionno, None)
             if ev["session"] is None:
                 print(f"No session found for sessionno {sessionno}: {ev!r}")
                 return
+
+        if sessionno in self.ips:
+            ev["src_ip"] = self.ips[sessionno]
 
         self.write(ev)
 

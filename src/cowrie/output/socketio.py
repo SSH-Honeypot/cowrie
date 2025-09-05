@@ -4,6 +4,8 @@ Minimal SocketIO Output Plugin for Cowrie using reactor.callInThread
 
 from __future__ import annotations
 
+import time
+
 from twisted.internet import reactor
 from twisted.python import log
 import socketio
@@ -31,14 +33,14 @@ class Output(cowrie.core.output.Output):
         """
         Connect to the SocketIO server in a separate thread.
         """
-        try:
-            self.sio.connect(self.url, auth={ "sensor": self.sensor })
-            self.connected = True
-            log.msg("output_socketio: Connected to server")
-        except Exception as e:
-            self.connected = False
-            log.err(f"output_socketio: Connection failed: {e}")
-            reactor.callLater(5, self._connect)
+        while not self.connected:
+            try:
+                self.sio.connect(self.url, auth={"sensor": self.sensor})
+                self.connected = True
+                log.msg("output_socketio: Connected to server")
+            except Exception as ex:
+                log.err(f"output_socketio: Failed to establish initial connnection to server: {type(ex).__name__}")
+                time.sleep(5)
 
     def stop(self) -> None:
         """

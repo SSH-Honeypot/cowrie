@@ -14,8 +14,8 @@ from cowrie.core.config import CowrieConfig
 
 class Output(cowrie.core.output.Output):
     sio = socketio.SimpleClient()
-    url = None
-    connected = False
+    url: str = None
+    connected: bool = False
 
     def start(self) -> None:
         """
@@ -62,7 +62,7 @@ class Output(cowrie.core.output.Output):
             return
         reactor.callInThread(self._send_event, event["eventid"], event)
 
-    def _send_event(self, event_name: str, event: dict):
+    def _send_event(self, event_name: str, event: dict) -> None:
         """
         Send the event to the SocketIO backend in a separate thread.
         """

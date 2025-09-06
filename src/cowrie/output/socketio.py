@@ -69,7 +69,7 @@ class Output(cowrie.core.output.Output):
         Send the event to the SocketIO backend in a separate thread.
         """
         try:
-            self.sio.emit(event_name, { "session": event["session"], "src_ip": event["src_ip"], "username": event["username"], "password": event["password"] })
+            self.sio.emit(event_name, { "session": event["session"], "sensor": self.sensor, "src_ip": event["src_ip"], "username": event["username"], "password": event["password"] })
             log.msg(f"output_socketio: Sent event {event_name}")
         except Exception as e:
             log.err(f"output_socketio: Failed to send event {event_name}: {e}")
